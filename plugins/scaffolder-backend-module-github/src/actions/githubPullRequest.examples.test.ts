@@ -620,7 +620,7 @@ describe('publish:github:pull-request examples', () => {
   it('Create a pull request with all parameters', async () => {
     mockDir.setContent({
       [workspacePath]: {
-        source: { 'foo.txt': 'Hello there!' },
+        source: { 'foo.txt': 'Hello there!', 'delete-me.txt': 'Ciao!' },
         irrelevant: { 'bar.txt': 'Nothing to see here' },
       },
     });
@@ -649,6 +649,7 @@ describe('publish:github:pull-request examples', () => {
               encoding: 'base64',
               mode: '100644',
             },
+            'targetPath/delete-me.txt': null,
           },
           author: {
             email: 'foo@bar.example',
@@ -666,6 +667,112 @@ describe('publish:github:pull-request examples', () => {
       team_reviewers: ['team-foo'],
     });
 
+    expect(mockContext.output).toHaveBeenCalledTimes(3);
+    expect(mockContext.output).toHaveBeenCalledWith('targetBranchName', 'main');
+    expect(mockContext.output).toHaveBeenCalledWith(
+      'remoteUrl',
+      'https://github.com/myorg/myrepo/pull/123',
+    );
+    expect(mockContext.output).toHaveBeenCalledWith('pullRequestNumber', 123);
+  });
+
+  it('Create a pull request with file deletions', async () => {
+    mockDir.setContent({
+      [workspacePath]: {
+        'file.txt': 'Hello there!',
+        'file2.txt': 'Hola!',
+        'delete-me.txt': 'Ciao!',
+      },
+    });
+
+    const input = yaml.parse(examples[13].example).steps[0].input;
+
+    await action.handler({
+      ...mockContext,
+      workspacePath,
+      input,
+    });
+
+    expect(fakeClient.createPullRequest).toHaveBeenCalledWith({
+      owner: 'owner',
+      repo: 'repo',
+      title: 'Create my new app',
+      body: 'This PR is really good',
+      head: 'new-app',
+      changes: [
+        {
+          commit: 'Create my new app',
+          files: {
+            'file.txt': {
+              content: Buffer.from('Hello there!').toString('base64'),
+              encoding: 'base64',
+              mode: '100644',
+            },
+            'file2.txt': {
+              content: Buffer.from('Hola!').toString('base64'),
+              encoding: 'base64',
+              mode: '100644',
+            },
+            'delete-me.txt': null,
+          },
+        },
+      ],
+    });
+    expect(fakeClient.rest.pulls.requestReviewers).not.toHaveBeenCalled();
+    expect(mockContext.output).toHaveBeenCalledTimes(3);
+    expect(mockContext.output).toHaveBeenCalledWith('targetBranchName', 'main');
+    expect(mockContext.output).toHaveBeenCalledWith(
+      'remoteUrl',
+      'https://github.com/myorg/myrepo/pull/123',
+    );
+    expect(mockContext.output).toHaveBeenCalledWith('pullRequestNumber', 123);
+  });
+
+  it('Create a pull request with folder deletion', async () => {
+    mockDir.setContent({
+      [workspacePath]: {
+        'file.txt': 'Root file',
+        'first/file.txt': 'Sub file',
+        'first/second/file.txt': 'Delete this',
+        'first/second/third/file.txt': 'Delete this',
+      },
+    });
+
+    const input = yaml.parse(examples[14].example).steps[0].input;
+
+    await action.handler({
+      ...mockContext,
+      workspacePath,
+      input,
+    });
+
+    expect(fakeClient.createPullRequest).toHaveBeenCalledWith({
+      owner: 'owner',
+      repo: 'repo',
+      title: 'Create my new app',
+      body: 'This PR is really good',
+      head: 'new-app',
+      changes: [
+        {
+          commit: 'Create my new app',
+          files: {
+            'file.txt': {
+              content: Buffer.from('Root file').toString('base64'),
+              encoding: 'base64',
+              mode: '100644',
+            },
+            'first/file.txt': {
+              content: Buffer.from('Sub file').toString('base64'),
+              encoding: 'base64',
+              mode: '100644',
+            },
+            'first/second/file.txt': null,
+            'first/second/third/file.txt': null,
+          },
+        },
+      ],
+    });
+    expect(fakeClient.rest.pulls.requestReviewers).not.toHaveBeenCalled();
     expect(mockContext.output).toHaveBeenCalledTimes(3);
     expect(mockContext.output).toHaveBeenCalledWith('targetBranchName', 'main');
     expect(mockContext.output).toHaveBeenCalledWith(

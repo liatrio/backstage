@@ -259,6 +259,43 @@ export const examples: TemplateExample[] = [
             commitMessage: 'Commit for foo changes',
             gitAuthorName: 'Foo Bar',
             gitAuthorEmail: 'foo@bar.example',
+            deleteFiles: ['targetPath/delete-me.txt'],
+          },
+        },
+      ],
+    }),
+  },
+  {
+    description: 'Create a pull request with file deletions',
+    example: yaml.stringify({
+      steps: [
+        {
+          action: 'publish:github:pull-request',
+          name: 'Create a pull request with file deletions',
+          input: {
+            repoUrl: 'github.com?repo=repo&owner=owner',
+            branchName: 'new-app',
+            title: 'Create my new app',
+            description: 'This PR is really good',
+            deleteFiles: ['delete-me.txt'],
+          },
+        },
+      ],
+    }),
+  },
+  {
+    description: 'Create a pull request with folder deletion',
+    example: yaml.stringify({
+      steps: [
+        {
+          action: 'publish:github:pull-request',
+          name: 'Create a pull request with wildcard file deletion',
+          input: {
+            repoUrl: 'github.com?repo=repo&owner=owner',
+            branchName: 'new-app',
+            title: 'Create my new app',
+            description: 'This PR is really good',
+            deleteFiles: ['first/second/'],
           },
         },
       ],

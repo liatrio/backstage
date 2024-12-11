@@ -147,6 +147,7 @@ export const createPublishGithubPullRequestAction = (
     gitAuthorName?: string;
     gitAuthorEmail?: string;
     forceEmptyGitAuthor?: boolean;
+    deleteFiles?: string[];
   }>({
     id: 'publish:github:pull-request',
     examples,
@@ -253,6 +254,15 @@ export const createPublishGithubPullRequestAction = (
             description:
               'Forces the author to be empty. This is useful when using a Github App, it permit the commit to be verified on Github',
           },
+          deleteFiles: {
+            title: 'Delete Repository Files',
+            type: 'array',
+            items: {
+              type: 'string',
+            },
+            description:
+              'Files that should be deleted as part of the pull request',
+          },
         },
       },
       output: {
@@ -295,6 +305,7 @@ export const createPublishGithubPullRequestAction = (
         gitAuthorEmail,
         gitAuthorName,
         forceEmptyGitAuthor,
+        deleteFiles = [],
       } = ctx.input;
 
       const { owner, repo, host } = parseRepoUrl(repoUrl, integrations);
@@ -333,23 +344,37 @@ export const createPublishGithubPullRequestAction = (
       ): 'utf-8' | 'base64' => (file.symlink ? 'utf-8' : 'base64');
 
       const files = Object.fromEntries(
-        directoryContents.map(file => [
-          targetPath ? path.posix.join(targetPath, file.path) : file.path,
-          {
-            // See the properties of tree items
-            // in https://docs.github.com/en/rest/reference/git#trees
-            mode: determineFileMode(file),
-            // Always use base64 encoding where possible to avoid doubling a binary file in size
-            // due to interpreting a binary file as utf-8 and sending github
-            // the utf-8 encoded content. Symlinks are kept as utf-8 to avoid them
-            // being formatted as a series of scrambled characters
-            //
-            // For example, the original gradle-wrapper.jar is 57.8k in https://github.com/kennethzfeng/pull-request-test/pull/5/files.
-            // Its size could be doubled to 98.3K (See https://github.com/kennethzfeng/pull-request-test/pull/4/files)
-            encoding: determineFileEncoding(file),
-            content: file.content.toString(determineFileEncoding(file)),
-          },
-        ]),
+        directoryContents.map(file => {
+          const fullPath = targetPath
+            ? path.posix.join(targetPath, file.path)
+            : file.path;
+
+          const shouldDelete = deleteFiles.some(deletePattern =>
+            fullPath.startsWith(deletePattern),
+          );
+
+          if (shouldDelete) {
+            return [fullPath, null];
+          }
+
+          return [
+            fullPath,
+            {
+              // See the properties of tree items
+              // in https://docs.github.com/en/rest/reference/git#trees
+              mode: determineFileMode(file),
+              // Always use base64 encoding where possible to avoid doubling a binary file in size
+              // due to interpreting a binary file as utf-8 and sending github
+              // the utf-8 encoded content. Symlinks are kept as utf-8 to avoid them
+              // being formatted as a series of scrambled characters
+              //
+              // For example, the original gradle-wrapper.jar is 57.8k in https://github.com/kennethzfeng/pull-request-test/pull/5/files.
+              // Its size could be doubled to 98.3K (See https://github.com/kennethzfeng/pull-request-test/pull/4/files)
+              encoding: determineFileEncoding(file),
+              content: file.content.toString(determineFileEncoding(file)),
+            },
+          ];
+        }),
       );
 
       // If this is a dry run, log and return
