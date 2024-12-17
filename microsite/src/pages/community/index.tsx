@@ -101,6 +101,11 @@ const Community = () => {
       url: 'https://statusneo.com/backstage',
       logo: 'img/partner-logo-statusneo.png',
     },
+    {
+      name: 'Liatrio',
+      url: 'https://liatrio.com/partnerships/backstage',
+      logo: 'img/partner-logo-liatrio.png',
+    },
   ];
   //#endregion
 
