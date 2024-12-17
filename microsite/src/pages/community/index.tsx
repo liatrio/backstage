@@ -103,7 +103,7 @@ const Community = () => {
     },
     {
       name: 'Liatrio',
-      url: 'https://liatrio.com/partnerships/backstage',
+      url: 'https://www.liatrio.com/service-offerings/backstage',
       logo: 'img/partner-logo-liatrio.png',
     },
   ];
